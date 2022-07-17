@@ -1,4 +1,4 @@
-# Eazfuscator.NET虚拟机壳还原方法 -- by [Jemmy Wang (JemmyLoveJenny)](https://github.com/JemmyLoveJenny)
+# Eazfuscator.NET虚拟机壳还原方法
 ## 前言
 ### 废话
 我开始分析Eazfuscator的原因真的是好奇葩……
@@ -133,13 +133,13 @@ public bool IsActivated(string serial) {
 那么用dnSpy的分析功能，分析这些方法被的调用的地方
 我知道我的UnpackMe里用到了DESCryptoServiceProvider，那我们当做白盒测试，分析一下看看吧！
 把UnpackMe1.exe拖入dnSpy-x86(非x86的那个不能调试)，在mscorlib.dll找到System.Security.Cryptography命名空间，对其中的DESCryptoServiceProvider分析，
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-DESCryptoServiceProvider.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-DESCryptoServiceProvider.png)
 emmm？居然没有被使用？！是dnSpy出问题了吗？难道有办法调用函数而不被分析器察觉到吗？
 当然是有的，别忘了.Net有一个很神奇的功能——Reflection
 [不太了了解Reflection的童鞋点这里](https://blog.csdn.net/caosiyuan1991/article/details/19172755)
 如果是用了Reflection的话，Reflection一定能被分析到，因为就算Reflection被虚拟化，还是Reflection。
 那我们重新试一次，选择Reflection的MethodInfo吧
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-MethodInfo.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-MethodInfo.png)
 分析器里面那些\u000x\u000x名称的方法就是和虚拟化调用有关的方法了。
 
 ## 虚拟IL还原 - 基本方法 (一般够用了)
@@ -176,7 +176,7 @@ private void BtnStringEncryption_Click(object sender, EventArgs e)
 接下来我不会再写那么详细了……不然文章写不完了。
 代码十分分散，不方便贴图贴代码了。想要看懂的话，最好是把dnSpy打开，亲手操作一遍
 我们接下来对Virtualization按钮开刀
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BtnVirtualization_Click.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BtnVirtualization_Click.png)
 分析虚拟化代码需要抓重点，举个例子：
 单步调试可以知道以上的代码中真正有效的是
 ```
@@ -189,7 +189,7 @@ u0002_u.\u0002(u, u2, u3);
 这很重要！！！我最初没有想到Reflection，就是抓重点一路摸到关键断点位置的。
 
 在调用方法处下断点真的十分简单，因为现在知道调用会用到Reflection，我又根据经验得出，好几个有关调用的关键函数都用到了MethodBase.IsConstructor。因此我们用分析器，分析(mscorlib.dll)System.Reflection.MethodBase.IsConstructor.get()被使用的情况，就可以找到关键函数。
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-MethodBase.IsConstructor.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-MethodBase.IsConstructor.png)
 
 断点刚开始可以多下一些，对分析器找到的4个方法全部添加方法断点（在函数入口和出口各下一个，总共8个断点），然后面再把功能重复或者不需要的断点再删掉就行了，我最后在8个断点中保留了2个
 ```
@@ -206,13 +206,13 @@ u0002_u.\u0002(u, u2, u3);
 我的附件中有一个Breakpoints.xml，断点下不对的童鞋可以dnSpy导入我的断点，体验一下。
 
 下完断点或导入断点之后，断点窗口如下：
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BreakPoints-Simple.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BreakPoints-Simple.png)
 只要看那三个打钩激活的断点就行了，别的断点是高级方法里用的。
 
 断点下完之后，再次开始调试，输入框里随便输入点东西(我输了AAAAA)，点击Virtualization，程序就会被dnSpy断下来。
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BP-1.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BP-1.png)
 图中\u0002就是现在调用的方法MethodBase，然后按继续
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BP-2.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/BP-2.png)
 可以看到u4就是调用的执行结果
 
 然后不停地按继续就可以了，总结之后可以知道，每个断点处的局部变量含义：
@@ -316,7 +316,7 @@ MSDN上面有关于OpCodes的详细介绍([点击此处](https://docs.microsoft.
 
 #### .Net CLR 堆栈 (数据流向)
 首先要知道.Net CLR执行IL时的几个堆栈
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CLR-Overview.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CLR-Overview.png)
 注意这里的堆栈和PE程序对的堆栈不同，这不是对于CPU真实存在的堆栈，只是一个CLR抽象出来、CLR管理的逻辑堆栈。
 
 实际上 FunctionParameters 和 LocalParameters 都不符合先进后出，并不是一般意义上的堆栈，我不知道该怎么称呼。把他俩当做存储数据的地方就行了。
@@ -373,22 +373,22 @@ Eazfuscator的IL虚拟化保护，真正运行的指令还是IL指令啊。想�
 #### 找到产生运行指令的地方
 指令流肯定要循环Read，获取到现在要执行的指令才能执行起来对吧，那我们接下来就要找到这个有循环的地方。
 先就用断点记录法里设置的3个断点就够了，任意输入后点击Virtualization，断点断下后，我们看一下调用堆栈(工具栏-调试-窗口-调用堆栈)
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-1.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-1.png)
 然后我们就从上往下一个个看吧，直到这里
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-2.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-2.png)
 我们才发现有一个循环，虽然现在还看不懂具体的作用，但是这里确实就是循环执行指令，使虚拟IL连续运行的地方。
 \u0002\u2007.\u0005(bool):void 这里就是一个虚拟化函数的标志，每个虚拟化的函数一定都会运行到这里。
 调用堆栈里该函数的数量也体现出虚拟化调用层级的个数。
 比如说，点击Virtualization，我们看到调用堆栈里的\u0002\u2007.\u0005(bool):void个数始终只有一个。
 但是点击CallVirtualization，当MessageBox弹出"Leave CallVirtualization"之后，再点几次继续，就能看到调用堆栈迅速膨胀，出现两层\u0002\u2007.\u0005(bool):void，如图：
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-3.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/CallStack-3.png)
 
 然后从这个地方跟着一步步单步调试，就可以发现其他类比过来的东西了。
 
 #### Eazfuscator.NET虚拟CLR的堆栈 (数据流向)
 ##### 数据包装类型
 Eazfuscator堆栈中的数据都被包装过，数据包装的基本类型是\u0002\u2001，然后它有几种派生类型，如图所示：
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2001.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2001.png)
 这些派生类型的用来包装不同的基本类型，比如：
 
 | 数据包装类名 | 存储数据类型 |
@@ -432,7 +432,7 @@ LocalVariables全部存储在\u0005中，\u0005[x]就是ldloc.x的x
 主要思想就是把clear.exe的IL代码和obfs的CLR局部变量变化对照起来看就可以了。
 另外就是多用分析器分析一下各个函数之间的关系。
 我们在任意一个\u0002\u2007里的断点断下，然后把this展开，看到的结果如下：
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2007.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2007.png)
 
 |局部变量类型 | 局部变量名称 | 局部变量作用|
 | - | - | - |
@@ -469,9 +469,9 @@ LocalVariables全部存储在\u0005中，\u0005[x]就是ldloc.x的x
 #### Eazfuscator.NET虚拟IL指令解析
 我们上文找到了循环执行指令的地方 \u0002\u2007.\u0005(bool):void
 但是这并不是指令的来源，我们仔细看一下代码
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0005.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0005.png)
 上面的判断是有关return和分支跳转的，我们先不用管，可以发现每次循环都会调用this.\u000E()，那我们就跟过去看看。
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u000E.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u000E.png)
 这里就是指令执行的重点了
 
 看一下代码的功能，先获取\u0005\u2003指令指针，将\u0005\u2003设置到\u000F (变量含义见上表)
@@ -512,7 +512,7 @@ u0002_u.\u0003(this, this.\u0002(this.\u0003\u2000, u0002_u.\u0002));
 现在我们知道key=num=\u0003\u2000.\u0006()，先放一下，等一会再继续分析。来看最后三行
 定义了一个类型为\u0002\u2007.\u0002\u2000的变量u0002_u，把Dictionary.TryGetValue的结果放进了这个变量里面
 变量的类型是一个结构，如图：
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2000.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2000.png)
 其中有一个byte，叫做\u0002
 另外有一个\u0002\u2007.\u000F，叫做\u0003
 那个\u0002\u2007.\u000F是一个委托的类型，定义如下：
@@ -523,7 +523,7 @@ private delegate void \u000F(\u0002\u2007 \u0002, global::\u0002\u2001 \u0003);
 this是什么，想必大家已经有部分理解了，虽然还看不懂传递给delegate的目的……
 那么我们研究一下另一个参数this.\u0002(this.\u0003\u2000,u0002_u.\u0002)
 传入参数中，this.\u0003\u2000是读取器，u0002_u.\u0002是结构中的那个byte
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002-switch.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002-switch.png)
 这个方法简单直接地switch了结构中的byte，根据不同的case，有不同的操作。
 
 先看case到0,7的那个代码块，指令指针增加4，返回值是用\u0002.\u0006()初始化的\u000E\u2003
@@ -563,7 +563,7 @@ this是什么，想必大家已经有部分理解了，虽然还看不懂传递�
 
 现在就算猜，也能知道delegate是什么了吧…？
 调用delegate的那句才是真正产生作用的语句，这个delegate指向一个函数，这个函数会操作虚拟机的三个堆栈。
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Delegates.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Delegates.png)
 图中是\u0002\u2007中的一些委托可能指向的函数，这些函数，每一个都相当于一个IL指令。
 
 刚才讲的有点复杂，而且名称混淆扰乱讲解，我把重要部分的代码重写一下，再看一遍应该能懂了……
@@ -590,10 +590,10 @@ structure.operate(this, this.GetOperand(this.DirectiveReader, structure.operandT
 
 这一步方法有很多种，我就举一个例子：
 比如说，我通过静态分析算法，或者查看执行前后堆栈的变化知道下图
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/ldarg.0.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/ldarg.0.png)
 这个函数是ldarg.0，那么u0002\u2007.u0003(x)就相当于是ldarg.x咯
 我们用分析器分析u0002\u2007.u0003(x)，如图
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2007.u0003.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002u2007.u0003.png)
 然后就可以顺藤摸瓜找到
 ```csharp
 //ldarg.0
@@ -666,7 +666,7 @@ private static void \u000F\u200A\u2000(\u0002\u2007 \u0002, \u0002\u2001 \u0003)
 把一般常用的IL指令，比如ldarg.s, ldc.i4.s, ldloc.s, stloc.s, ldarg.s, call 和分支跳转指令的 delegate找到就差不多了 (下一章会讲一下分析跳转指令的方法)
 
 接下来的步骤，就是把指令(数据)流按照 Key,Operand 转化为对应的IL (见附件里的BtnVirtualization_Click.vil)
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/VIL.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/VIL.png)
 /* */之间的是指令指针和虚拟化IL对应的十六进制数据
 可以看到，每个IL指令对应的十六进制总是相同的，读取十六进制转化为key和参数的时候别忘了根据数据类型调换顺序！
 至于call和callvirt的MethodBase还是需要通过断点记录法的三个断点得到。
@@ -674,16 +674,16 @@ private static void \u000F\u200A\u2000(\u0002\u2007 \u0002, \u0002\u2001 \u0003)
 #### 分支跳转的实现原理
 我们高级的IL还原法，优势就在于可以分析分支，那就讲一下分析分支的方法：
 回到 \u0002\u2007.\u0005(bool):void 就是那个while循环的地方
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Au0005-2.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Au0005-2.png)
 while判断的条件this.\u000F\u2001是return的标志，就是说执行虚拟return时会设置this.\u000F\u2001=true，因此退出while循环，执行break，退出那个并没有任何作用的for循环，然后按照调用堆栈逐级返回。
 
 那个if语句就是判断跳转的地方了，当遇到 br, btrue, bfalse, ble, blt, bge, bgt 等等分支跳转语句的时候，会将 \u000E\u2001 设置为跳转的目标。
 \u000E\u2001是一个比较神奇的类型，uint?，实际上是Nullable<uint>，就是可以为null的uint。
 当不需要跳转的时候，保持为null，需要跳转时，将指令指针\u0005\u2003设置为此unit?的值。
 所以分析跳转，只要分析哪个函数将\u000E\u2001设置为非null即可，用分析器，只找到一个函数，就是u0002(uint):void
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/u0002.png)
 可以看出它只负责设置跳转指令，而没有判断。所以可以知道其他的跳转语句都会调用它，那么继续用分析器分析。
-![](https://jemmylovejenny.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-u0002.png)
+![](https://jemmy1228.github.io/articles/Eazfuscator-Anti-Virtual-IL/images/Analyze-u0002.png)
 这些就是等效替代IL跳转指令的函数了……然后需要有耐心地一点点分析每一个函数的作用了。
 实在不想分析的话，那就每次修改EvaluationStack上的数据(分别大于等于小于IL指令的参数)，调用相同的delegate，看一下是否跳转(看指令指针\u0005\u2003的变化)，总是有办法分析出跳转条件的。
 
